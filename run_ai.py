@@ -1,4 +1,7 @@
+import os
+import neat
 import pygame
+
 from Src.Class.bird import Player
 from Src.Class.pipe import Tube
 from Src.Class.back import background_image
@@ -6,11 +9,13 @@ from Src.constant import WINDOW_HEIGHT, WINDOW_WIDTH, FPS
 from Src.color import WHITE, RED, BLUE, BLACK
 
 
+CHECKPOINT_FILE = 'neat-checkpoint1'
+
+
 # Global variables
 max_score = []
-game_quit = True
 int_try = 0
-v_delta = 200
+v_delta = 170
 x_velocity = 0
 
 
@@ -43,7 +48,7 @@ def load_screen():
     screen.blit(background_image, (0, 0))
     screen.blit(background_image, (288, 0)) 
 
-def handle_command(player: Player):
+def call_flap_up(player: Player):
     """Handle user input events.
     
     Args:
@@ -52,16 +57,12 @@ def handle_command(player: Player):
     Returns:
         bool: True if the game is still running, False if the user quits.
     """
-    is_alive = True
+    player.flap_up()
+
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            is_alive = False
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                player.flap_up()
             if event.key == pygame.K_1:
                 pygame.quit()
-    return is_alive
 
 def get_collidate(player: Player, tube_list: list[Tube], tube_index: int):
     """Check collision between player and tubes.
@@ -82,20 +83,6 @@ def get_collidate(player: Player, tube_list: list[Tube], tube_index: int):
         return True
     
     return False
-
-def update(dt, player: Player, tube_list: list[Tube]):
-    """Update game entities based on delta time.
-    
-    Args:
-        - dt (float): Time elapsed since the last update.
-        - player (Player): The player object.
-        - tube_list (list[Tube]): List of Tube objects.
-    """
-    player.update(dt)
-
-    for tube in tube_list:
-        if not tube.offscreen():
-            tube.update(dt)
 
 def collidate_player(player: Player, tube_list: list[Tube], tube_index: int):
     """Check if player collides with any tubes.
@@ -121,6 +108,22 @@ def collidate_player(player: Player, tube_list: list[Tube], tube_index: int):
 
     return is_alive
 
+def update_text_screen(score, n_bird):
+    """Update and display text on the screen.
+    
+    Args:
+        score (int): Current score of the game.
+    """
+    try_text = font.render(f'Bird: {n_bird}', True, (255, 255, 255))
+    screen.blit(try_text, (10, 10)) 
+
+    score_text = font.render(f'Score: {score}', True, (255, 255, 255))
+    screen.blit(score_text, (10, 35)) 
+
+    if len(max_score) > 0:
+        max_score_text = font.render(f'Max Score: {max(max_score)}', True, (255, 255, 255))
+        screen.blit(max_score_text, (10, 60)) 
+
 def increment_diff(player: Player, tube_list: list[Tube]):
     """
     Adjust the difficulty of the game by modifying the velocity parameters based on player interactions and tube positions.
@@ -133,10 +136,10 @@ def increment_diff(player: Player, tube_list: list[Tube]):
     global v_delta, x_velocity
     
     # Variabili massime
-    max_v_delta = 110
+    max_v_delta = 100
     max_y_velocity = 20
-    max_gravity = 8
-    max_jump_strength = -24
+    max_gravity = -16
+    max_jump_strength = -30
 
     # Aggiornamento velocita di tutti i tubi
     for i in range(len(tube_list)):
@@ -146,7 +149,7 @@ def increment_diff(player: Player, tube_list: list[Tube]):
     v_delta -= 5
 
     # Aggiornaemento velocita player
-    player.gravity -= 0.5
+    
     player.jump_strength += 2
 
     if player.jump_strength > max_jump_strength:
@@ -154,28 +157,13 @@ def increment_diff(player: Player, tube_list: list[Tube]):
 
     if player.gravity < max_gravity:
         player.gravity = max_gravity
+    else:
+        player.gravity -= 0.5
 
     if v_delta < max_v_delta:
         v_delta = max_v_delta
 
-
-    #print("J: ", player.jump_strength,  "G: ", player.gravity, "X_V: ", x_velocity, "V_D: ", v_delta, "Y_V: ", tube_list[-1].velocity_y)
-
-def update_text_screen(score):
-    """Update and display text on the screen.
-    
-    Args:
-        score (int): Current score of the game.
-    """
-    try_text = font.render(f'Try: {int_try}', True, (255, 255, 255))
-    screen.blit(try_text, (10, 10)) 
-
-    score_text = font.render(f'Score: {score}', True, (255, 255, 255))
-    screen.blit(score_text, (10, 35)) 
-
-    if len(max_score) > 0:
-        max_score_text = font.render(f'Max Score: {max(max_score)}', True, (255, 255, 255))
-        screen.blit(max_score_text, (10, 60)) 
+    print("DIFF = G: ", player.gravity, "Y_V: ", tube_list[-1].velocity_y, "V_D: ", v_delta, "J: ", player.jump_strength)
 
 def calculate_distances_and_draw_lines(player, tube_list, score):
     """
@@ -243,57 +231,140 @@ def calculate_distances_and_draw_lines(player, tube_list, score):
     return distances
 
 
-def run():
-    global game_quit, v_delta, x_velocity
+def eval_genomes(genomes, config):
 
-    score = 0
+    global int_try, v_delta, x_velocity
+
+    # Init start variable
+    int_try += 1
+    v_delta = 160
+    x_velocity = 0
+
+    # Variabile for main function
+    score = 0       
     tube_index = 0
     tube_list = [Tube(v_delta, x_velocity)]
-    player = Player()
-    is_alive = True
 
-    while is_alive:
+    nets = []
+    ge = []
+    birds = []
+
+    # Create a list of birds
+    for genome_id, genome in genomes:
+        genome.fitness = 0  # start with fitness level of 0
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+        nets.append(net)
+        birds.append(Player())
+        ge.append(genome)
+
+    while len(birds) > 0:
         dt = clock.tick(FPS) / 100
-        is_alive = handle_command(player)
-
+        
+        # call_flap_up
         load_screen()
 
         # Aggiornamento player e tubi
-        update(dt, player, tube_list)
+        for i, bird in enumerate(birds):
+            bird.update(dt)
 
-        # Aumenta lo score 
-        if player.position[0] > tube_list[score].position[0] + Tube.size[0] : 
-            score += 1
-
-            if score%4 == 1:
-                increment_diff(player, tube_list)
+        for tube in tube_list:
+            if not tube.offscreen():
+                tube.update(dt)
 
         # Crea nuovi tubie
         if tube_list[-1].position[0] < 400:
             tube_list.append(Tube(v_delta, x_velocity))
             tube_index += 1
 
+        for i, bird in enumerate(birds):
+            ge[i].fitness += 0.1
+            
+            # Get 8 size distance
+            distanze = calculate_distances_and_draw_lines(bird, tube_list, score)
+
+            # Input for function activation
+            input_data = input_data = [
+                bird.position[0], bird.position[1], bird.jump_strength, bird.gravity, bird.velocity_y,
+                distanze[0], distanze[1], distanze[2], distanze[3], distanze[4], distanze[5], distanze[6], distanze[7],
+                tube_list[score].position[0], tube_list[score].position[1] - 1, tube_list[score].velocity_y,
+                tube_list[score].position_rotate[0], tube_list[score].position_rotate[1] + 1, tube_list[score].velocity_y,
+                x_velocity
+            ]
+
+            output = nets[i].activate(input_data)
+
+            if output[0] > 0.99:
+                call_flap_up(bird)
+
         # Disegna il tuboe e player sullo schermo
-        player.draw(screen)
+        for bird in birds:
+            bird.draw(screen)
+
         for tube in tube_list:
             if not tube.offscreen():
                 tube.draw(screen)
 
-        # Get 8 size distance
-        distanze = calculate_distances_and_draw_lines(player, tube_list, score)
+        for i, bird in enumerate(birds):
 
-        # Collisione player e tubo
-        is_alive = collidate_player(player, tube_list, tube_index)
+            # Get of alive
+            is_alive = collidate_player(bird, tube_list, tube_index)
+            
+            if is_alive:
+                if bird.position[0] > tube_list[score].position[0] + Tube.size[0]:
 
-        update_text_screen(score)
+                    # Passaggio del tubo
+                    ge[i].fitness += 1
+                    score += 1
 
+                    if score%4 == 1:
+                        increment_diff(bird, tube_list)
+                        
+            else:
+                ge[i].fitness -= 1
+                nets.pop(i)
+                ge.pop(i)
+                birds.pop(i)
+
+        # Update screen
+        update_text_screen(score, len(birds))
         pygame.display.flip()
         clock.tick(FPS)
 
 
+def run(config_file):
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                config_file)
+
+    # Check if the checkpoint file exists
+    if os.path.exists(f'{CHECKPOINT_FILE}'):
+        print(f"Resuming from {CHECKPOINT_FILE}")
+        p = neat.Checkpointer.restore_checkpoint(f'{CHECKPOINT_FILE}')
+
+    else:
+        print("CHECKPOINT FILE DONT EXIST")
+        p = neat.Population(config)
+
+    # Add reporters to show progress in the terminal
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+
+    # Add a custom checkpointer that always saves to the same file
+    checkpointer = neat.Checkpointer(generation_interval=5, filename_prefix=CHECKPOINT_FILE)
+    p.add_reporter(checkpointer)
+
+    # Run for up to 50 generations
+    winner = p.run(eval_genomes, 999)
+
+    # Show final stats
+    print('\nBest genome:\n{!s}'.format(winner))
+
+    # Save the final state
+    checkpointer.save_checkpoint(config, p.population, p.species, 0)
+
+
 if __name__ == '__main__':
-    while game_quit:
-        int_try += 1
-        v_delta = 200
-        x_velocity = 0
-        run()
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, 'config.txt')
+    run(config_path)

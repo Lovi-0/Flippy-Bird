@@ -23,7 +23,7 @@ class Tube:
             - x_velocity (int, optional): Horizontal velocity of the tube (default is 0).
         """
         self.x_velocity = x_velocity
-        self.delta = random.randint(-150, 150)  # Random vertical variation
+        self.delta = random.randint(-180, 180)  # Random vertical variation
 
         # Calculate heights of the tube and its reversed counterpart
         self.h_tube = v_delta + self.delta

@@ -1,4 +1,5 @@
 import os
+import time
 import pygame
 from PIL import Image
 
@@ -16,24 +17,34 @@ class Player:
     A class representing the player (bird) in the Flappy Bird game.
     """
 
-    def __init__(self):
+    def __init__(self, start_y = 0):
         """
         Initialize the player (bird) object with default attributes.
         """
         self.x_velocity = 0
         self.image_index = 0
         self.size = bird_size
-        self.position = [(WINDOW_WIDTH - self.size[0]) // 2, WINDOW_HEIGHT // 4]
+        self.position = [(WINDOW_WIDTH - self.size[0]) // 2, WINDOW_HEIGHT // 4 + start_y]
         self.velocity_y = 5 + self.x_velocity
-        self.jump_strength = -40
-        self.gravity = 15
+        self.jump_strength = -35
+        self.gravity = 18
         self.is_ground = False
+
+        self.last_flap_time = 0  # Time of the last flap
+        self.flap_interval = 0.5  # Interval threshold in seconds
 
     def flap_up(self):
         """
         Make the bird flap upward.
         """
+        current_time = time.time()
+        if current_time - self.last_flap_time < self.flap_interval:
+            self.jump_strength -= 0.3
+        else:
+            self.jump_strength = -30
+
         self.velocity_y = self.jump_strength
+        self.last_flap_time = current_time
 
     def get_rect(self):
         """
@@ -51,10 +62,14 @@ class Player:
         Args:
             screen (pygame.Surface): The surface to draw the bird on.
         """
-        player_rect = self.get_rect()
-        current_image = bird_images[self.image_index]
-        screen.blit(current_image, player_rect)
-        self.image_index = (self.image_index + 1) % len(bird_images)
+        if self.velocity_y < 0:
+            player_rect = self.get_rect()
+            current_image = bird_images[self.image_index]
+            screen.blit(current_image, player_rect)
+            self.image_index = (self.image_index + 1) % len(bird_images)
+
+        else:
+            screen.blit(bird_images[self.image_index], self.get_rect())
 
     def update(self, dt):
         """
@@ -70,12 +85,14 @@ class Player:
             if not self.is_ground:
                 self.position[1] += self.velocity_y * dt
                 self.velocity_y += self.gravity * dt
+                
             else:
                 self.is_ground = False
                 self.flap_up()
-                self.gravity = 15
+                self.gravity = 18
                 self.position[1] += self.velocity_y * dt
                 self.velocity_y += self.gravity * dt
+
         else:
             self.position[1] = WINDOW_HEIGHT - self.size[1]
             self.velocity_y = 0
