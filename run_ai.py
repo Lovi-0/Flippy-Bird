@@ -138,7 +138,7 @@ def increment_diff(player: Player, tube_list: list[Tube]):
     # Variabili massime
     max_v_delta = 100
     max_y_velocity = 20
-    max_gravity = -16
+    max_gravity = -20
     max_jump_strength = -30
 
     # Aggiornamento velocita di tutti i tubi
@@ -165,7 +165,7 @@ def increment_diff(player: Player, tube_list: list[Tube]):
 
     print("DIFF = G: ", player.gravity, "Y_V: ", tube_list[-1].velocity_y, "V_D: ", v_delta, "J: ", player.jump_strength)
 
-def calculate_distances_and_draw_lines(player, tube_list, score):
+def calculate_distances_and_draw_lines(player, tube_list, score, show = False):
     """
     Calculate distances between specified points of the player and the tubes, and draw lines on the screen.
 
@@ -183,49 +183,49 @@ def calculate_distances_and_draw_lines(player, tube_list, score):
     # Line 1
     p1 = (player.get_rect().midbottom[0] + player.size[0] / 2, player.get_rect().midbottom[1])
     p2 = (tube_list[score].get_rect().midtop[0] - Tube.size[0] / 2, tube_list[score].get_rect().midtop[1])
-    pygame.draw.line(screen, RED, p1, p2, 2)
+    if show: pygame.draw.line(screen, RED, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     # Line 2
     p1 = (player.get_rect().midtop[0] + player.size[0] / 2, player.get_rect().midtop[1])
     p2 = (tube_list[score].get_rect_reverse().midbottom[0] - Tube.size[0] / 2, tube_list[score].get_rect_reverse().midbottom[1])
-    pygame.draw.line(screen, BLUE, p1, p2, 2)
+    if show: pygame.draw.line(screen, BLUE, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     # Line 3
     p1 = (player.get_rect().midbottom[0] - player.size[0] / 2, player.get_rect().midbottom[1])
     p2 = (tube_list[score].get_rect().midtop[0] + Tube.size[0] / 2, tube_list[score].get_rect().midtop[1])
-    pygame.draw.line(screen, RED, p1, p2, 2)
+    if show: pygame.draw.line(screen, RED, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     # Line 4
     p1 = (player.get_rect().midtop[0] - player.size[0] / 2, player.get_rect().midtop[1])
     p2 = (tube_list[score].get_rect_reverse().midbottom[0] + Tube.size[0] / 2, tube_list[score].get_rect_reverse().midbottom[1])
-    pygame.draw.line(screen, BLUE, p1, p2, 2)
+    if show: pygame.draw.line(screen, BLUE, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     # Line 5
     p1 = (player.get_rect().midbottom[0] - player.size[0] / 2, player.get_rect().midbottom[1])
     p2 = (tube_list[score].get_rect().midtop[0] - Tube.size[0] / 2, tube_list[score].get_rect().midtop[1])
-    pygame.draw.line(screen, RED, p1, p2, 2)
+    if show: pygame.draw.line(screen, RED, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     # Line 6
     p1 = (player.get_rect().midtop[0] - player.size[0] / 2, player.get_rect().midtop[1])
     p2 = (tube_list[score].get_rect_reverse().midbottom[0] - Tube.size[0] / 2, tube_list[score].get_rect_reverse().midbottom[1])
-    pygame.draw.line(screen, BLUE, p1, p2, 2)
+    if show: pygame.draw.line(screen, BLUE, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     # Line 7
     p1 = (player.get_rect().midbottom[0] + player.size[0] / 2, player.get_rect().midbottom[1])
     p2 = (tube_list[score].get_rect().midtop[0] + Tube.size[0] / 2, tube_list[score].get_rect().midtop[1])
-    pygame.draw.line(screen, RED, p1, p2, 2)
+    if show: pygame.draw.line(screen, RED, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     # Line 8
     p1 = (player.get_rect().midtop[0] + player.size[0] / 2, player.get_rect().midtop[1])
     p2 = (tube_list[score].get_rect_reverse().midbottom[0] + Tube.size[0] / 2, tube_list[score].get_rect_reverse().midbottom[1])
-    pygame.draw.line(screen, BLUE, p1, p2, 2)
+    if show: pygame.draw.line(screen, BLUE, p1, p2, 2)
     distances.append(distance_between_points(p1, p2))
 
     return distances
@@ -280,12 +280,15 @@ def eval_genomes(genomes, config):
             ge[i].fitness += 0.1
             
             # Get 8 size distance
-            distanze = calculate_distances_and_draw_lines(bird, tube_list, score)
+            if i == 0:
+                distanze = calculate_distances_and_draw_lines(bird, tube_list, score, True)
+            else:
+                distanze = calculate_distances_and_draw_lines(bird, tube_list, score)
 
             # Input for function activation
             input_data = input_data = [
                 bird.position[0], bird.position[1], bird.jump_strength, bird.gravity, bird.velocity_y,
-                distanze[0], distanze[1], distanze[2], distanze[3], distanze[4], distanze[5], distanze[6], distanze[7],
+                distanze[0] - 2, distanze[1] - 2, distanze[4] + 2, distanze[5] + 2,
                 tube_list[score].position[0], tube_list[score].position[1] - 1, tube_list[score].velocity_y,
                 tube_list[score].position_rotate[0], tube_list[score].position_rotate[1] + 1, tube_list[score].velocity_y,
                 x_velocity

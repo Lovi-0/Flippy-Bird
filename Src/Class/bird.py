@@ -27,7 +27,7 @@ class Player:
         self.position = [(WINDOW_WIDTH - self.size[0]) // 2, WINDOW_HEIGHT // 4 + start_y]
         self.velocity_y = 5 + self.x_velocity
         self.jump_strength = -35
-        self.gravity = 18
+        self.gravity = 22
         self.is_ground = False
 
         self.last_flap_time = 0  # Time of the last flap
@@ -89,7 +89,7 @@ class Player:
             else:
                 self.is_ground = False
                 self.flap_up()
-                self.gravity = 18
+                self.gravity = 2
                 self.position[1] += self.velocity_y * dt
                 self.velocity_y += self.gravity * dt
 
