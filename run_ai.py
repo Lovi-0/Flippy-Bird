@@ -114,14 +114,14 @@ def update_text_screen(score, n_bird):
     Args:
         score (int): Current score of the game.
     """
-    try_text = font.render(f'Bird: {n_bird}', True, (255, 255, 255))
+    try_text = font.render(f'Bird: {n_bird}', True, BLACK)
     screen.blit(try_text, (10, 10)) 
 
-    score_text = font.render(f'Score: {score}', True, (255, 255, 255))
+    score_text = font.render(f'Score: {score}', True, BLACK)
     screen.blit(score_text, (10, 35)) 
 
     if len(max_score) > 0:
-        max_score_text = font.render(f'Max Score: {max(max_score)}', True, (255, 255, 255))
+        max_score_text = font.render(f'Max Score: {max(max_score)}', True, BLACK)
         screen.blit(max_score_text, (10, 60)) 
 
 def increment_diff(player: Player, tube_list: list[Tube]):
@@ -136,9 +136,9 @@ def increment_diff(player: Player, tube_list: list[Tube]):
     global v_delta, x_velocity
     
     # Variabili massime
-    max_v_delta = 100
+    max_v_delta = 110
     max_y_velocity = 20
-    max_gravity = -20
+    max_gravity = 20
     max_jump_strength = -30
 
     # Aggiornamento velocita di tutti i tubi
@@ -287,16 +287,17 @@ def eval_genomes(genomes, config):
 
             # Input for function activation
             input_data = input_data = [
-                bird.position[0], bird.position[1], bird.jump_strength, bird.gravity, bird.velocity_y,
-                distanze[0] - 2, distanze[1] - 2, distanze[4] + 2, distanze[5] + 2,
-                tube_list[score].position[0], tube_list[score].position[1] - 1, tube_list[score].velocity_y,
-                tube_list[score].position_rotate[0], tube_list[score].position_rotate[1] + 1, tube_list[score].velocity_y,
-                x_velocity
+                bird.position[0], bird.position[1], bird.jump_strength, 
+                bird.gravity, bird.velocity_y,
+                distanze[0] * 1.3, distanze[1] * 1.3 , distanze[2] * 1.3 , distanze[3] * 1.3, distanze[4] * 1.3, distanze[5] * 1.3, distanze[6] * 1.3, distanze[7] * 1.3
+                #tube_list[score].position[0], tube_list[score].position[1] - 1, tube_list[score].velocity_y,
+                #tube_list[score].position_rotate[0], tube_list[score].position_rotate[1] + 1, tube_list[score].velocity_y,
+                #x_velocity
             ]
 
             output = nets[i].activate(input_data)
 
-            if output[0] > 0.99:
+            if output[0] > 0.995:
                 call_flap_up(bird)
 
         # Disegna il tuboe e player sullo schermo
@@ -323,7 +324,7 @@ def eval_genomes(genomes, config):
                         increment_diff(bird, tube_list)
                         
             else:
-                ge[i].fitness -= 1
+                ge[i].fitness -= 3
                 nets.pop(i)
                 ge.pop(i)
                 birds.pop(i)

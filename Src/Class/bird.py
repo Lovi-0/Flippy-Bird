@@ -39,7 +39,7 @@ class Player:
         """
         current_time = time.time()
         if current_time - self.last_flap_time < self.flap_interval:
-            self.jump_strength -= 0.3
+            self.jump_strength -= 0.6
         else:
             self.jump_strength = -30
 
