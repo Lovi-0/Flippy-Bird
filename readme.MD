@@ -1,5 +1,7 @@
 # Flappy Bird Game with AI
 
+<img src="logo.png" alt="logo" align="middle">
+
 ## Description
 
 This project features a Flappy Bird game implemented in Python using Pygame. It offers two modes of play:
